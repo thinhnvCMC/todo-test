@@ -6,8 +6,12 @@ import axios from 'axios'
 const actions = {
   setTodos: (payload) => ({ type: 'setTodos', payload }),
   unsetTodos: () => ({ type: 'unsetTodos' }),
-  setTodo: (payload) => ({ type: 'setTodo', payload }),
-  unsetTodo: () => ({ type: 'unsetTodo' })
+  setTodo: (payload) => ({ type: 'setTodo', payload }), 
+  unsetTodo: () => ({ type: 'unsetTodo' }),
+  addItemTodo: (payload) => ({ type: 'addItemTodo', payload }),
+  editTodo: (payload) => ({ type: 'editTodo', payload }),
+  deleteTodo: (payload) => ({ type: 'deleteTodo', payload }),
+  editItem: (payload) => ({ type: 'editItem', payload }),
 }
 
 const api = (dispatch) => ({
@@ -43,7 +47,48 @@ const api = (dispatch) => ({
   },
   resetTodo: () => {
     dispatch(actions.unsetTodo())
-  }
+  },
+  addItem: (values) => new Promise((resolve, reject) => axios({
+    method: 'POST',
+    url: `https://fswdi-api-todos.herokuapp.com/api/todos/${values.id}/todo-items`,
+    data: values.TodoItems[0]
+  }).then((resp) => {
+    dispatch(actions.addItemTodo(resp.data))
+    resolve(resp)
+  }).catch((err) => {
+    reject(err)
+  })),
+  editTodo: (values) => new Promise((resolve, reject) => axios({
+    method: 'PUT',
+    url: `https://fswdi-api-todos.herokuapp.com/api/todos/${values.id}`,
+    data: values
+  }).then((resp) => {
+    dispatch(actions.editTodo(resp.data.todo))
+    resolve(resp)
+  }).catch((err) => {
+    reject(err)
+  })),
+  deleteTodo: (TodoId) => new Promise((resolve, reject) => axios({
+    method: 'DELETE',
+    url: `https://fswdi-api-todos.herokuapp.com/api/todos/${TodoId}`
+  })
+    .then((resp) => {
+      resolve(resp)
+    })
+    .catch((err) => {
+      reject(err)
+    })),
+  editItem: (values) => new Promise((resolve, reject) => axios({
+    method: 'PUT',
+    url: `https://fswdi-api-todos.herokuapp.com/api/todos/${values.id}/todo-items/${itemId}`,
+    data: values
+  }).then((resp) => {
+    dispatch(actions.editItem(resp.data))
+    resolve(resp)
+  }).catch((err) => {
+    dispatch(actions.editItem({ todoItem: null }))
+    reject(err)
+  }))
 })
 
 const initialState = {
@@ -73,6 +118,26 @@ const reducer = (state, action) => {
     case 'unsetTodo': {
       return produce(state, (draft) => {
         draft.show = undefined
+      })
+    }
+    case 'addItemTodo': {
+      return produce(state, (draft) => {
+        draft.show.todo.TodoItems.push(action.payload.todoItem)
+      })
+    }
+    case 'editTodo': {
+      return produce(state, (draft) => {
+        draft.show.todo = action.payload
+      })
+    }
+    case 'editItem': {
+      return produce(state, (draft) => {
+        const foundIndex = draft.show.todo.TodoItems.findIndex(
+          (item) => item.id === action.payload.todoItem.id
+        )
+        if (foundIndex !== -1) {
+          draft.show.todo.TodoItems[foundIndex] = action.payload.todoItem
+        }
       })
     }
     default: {
